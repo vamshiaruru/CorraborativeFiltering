@@ -1,4 +1,5 @@
 from __future__ import division
+import time
 import numpy as np
 import scipy.sparse as ss
 from datetime import datetime
@@ -127,6 +128,27 @@ class Filter(object):
                 db[str(j)] = self.find_top_k_neighbors(j)
         print datetime.now().time()
 
+    def rmse(self, test_movies, test_users, test_ratings):
+        rmse_default = 0
+        rmse_baseline = 0
+        count = 0
+        try:
+            for j in xrange(test_ratings.shape[0]):
+                print j
+                count += 1
+                user = test_users[j]
+                item = test_movies[j]
+                rating = test_ratings[j]
+                predicted = self.predict_rating(user, item)
+                predicted_b = self.predict_rating(user, item, baseline=True)
+                rmse_default += (predicted - rating) ** 2
+                rmse_baseline += (predicted_b - rating) ** 2
+        except KeyboardInterrupt:
+            print "interrupted, exiting"
+        rmse_default = rmse_default / count
+        rmse_baseline = rmse_baseline / count
+        return rmse_default ** 0.5, rmse_baseline ** 0.5
+
 if __name__ == "__main__":
     filterObj = Filter()
     test_movies = np.zeros(20000)
@@ -140,26 +162,10 @@ if __name__ == "__main__":
             test_movies[count] = line[1] - 1
             test_ratings[count] = line[2]
             count += 1
-    print datetime.now().time()
-    rmse = 0
-    rmse_baseline = 0
-    count = 0
-    try:
-        for j in xrange(test_ratings.shape[0]):
-            print j
-            count += 1
-            user = test_users[j]
-            item = test_movies[j]
-            rating = test_ratings[j]
-            predicted = filterObj.predict_rating(user, item)
-            predicted_b = filterObj.predict_rating(user, item, baseline=True)
-            rmse += (predicted - rating) ** 2
-            rmse_baseline += (predicted_b - rating) ** 2
-    except KeyboardInterrupt:
-        print datetime.now().time()
-    rmse = rmse/filterObj.users.shape[0]
-    rmse_baseline = rmse/filterObj.users.shape[0]
-    print rmse ** 0.5, rmse_baseline ** 2
-    print datetime.now().time()
+    start_time = time.time()
+    default_rmse, baseline_rmse = \
+        filterObj.rmse(test_movies, test_users, test_ratings)
 
-# rmse = 0.530413696952, rmse_baseline = 1.23674153817e-11
+    print default_rmse, baseline_rmse
+    print "time taken is {}".format(time.time() - start_time)
+# rmse = 2.121654, rmse_baseline = 0.964939487747
